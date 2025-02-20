@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot with Filters</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            background-color: transparent;
+            overflow: hidden;
+        }
+
+        .chatbot-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: lightskyblue;
+            /* Light Sky Blue */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .chatbot-popup {
+            position: fixed;
+            bottom: -500px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: white;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.3);
+            transition: bottom 0.3s ease-in-out;
+            padding: 20px;
+            z-index: 100;
+            border-radius: 10px 10px 0 0;
+            display: none;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .chatbot-popup.active {
+            bottom: 80px;
+            display: block;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            /* background: red; */
+            color: black;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .filter-container {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .filter-card {
+            background: #d2eafb;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-card:hover {
+            background: #e3f2fd;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .filter-card h4 {
+            margin: 0;
+            text-align: left;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .filter-options {
+            display: none;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .checkbox-label input {
+            width: 16px;
+            height: 16px;
+            accent-color: #007bff;
+        }
+
+        .dropdown {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .clear-btn {
+    background: none;
+    border: none;
+    color: #d9534f;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    position: absolute;
+    right: 20px; /* Right-end position */
+    bottom: 10px; /* Adjust bottom spacing */
+}
+
+.clear-btn:hover {
+    color: #c9302c;
+}
+
+.reset-icon {
+    font-size: 18px;
+    margin-right: 5px;
+    color: #d9534f;
+}
+
+
+    </style>
+</head>
+
+<body>
+    <button class="chatbot-btn" id="chatbotButton">❓</button>
+
+    <div class="chatbot-popup" id="chatPopup">
+        <button class="close-btn" id="closePopup">X</button>
+        <style>
+            .gradient-text {
+                background: linear-gradient(to right, #3bc3f9, #a037e4);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                font-size: 28px;
+                font-weight: bold;
+                text-align: center;
+            }
+        </style>
+
+        <div class="gradient-text">Product Finder</div>
+        <button id="clearFilters" class="clear-btn">
+            <span class="reset-icon">✖</span> Reset All
+        </button>
+        
+        <div style="margin-top: 20px;" id="filter-container" class="filter-container"></div>
+    </div>
+
+    <script>
+
+        // Tooltip code
+
+        const chatbotBtn = document.getElementById("chatbotButton");
+
+        chatbotBtn.addEventListener("mouseover", function () {
+            const tooltip = document.createElement("div");
+            tooltip.innerText = "Product Finder";
+            tooltip.style.position = "absolute";
+            tooltip.style.bottom = "70px";
+            tooltip.style.right = "10px";
+            tooltip.style.backgroundColor = "black";
+            tooltip.style.color = "white";
+            tooltip.style.padding = "5px 10px";
+            tooltip.style.borderRadius = "5px";
+            tooltip.style.fontSize = "14px";
+            tooltip.style.whiteSpace = "nowrap";
+            tooltip.style.zIndex = "9999";
+            tooltip.id = "tooltip";
+
+            chatbotBtn.appendChild(tooltip);
+        });
+
+        chatbotBtn.addEventListener("mouseleave", function () {
+            const tooltip = document.getElementById("tooltip");
+            if (tooltip) {
+                tooltip.remove();
+            }
+        });
+
+        // Tooltip code
+
+        document.getElementById("chatbotButton").addEventListener("click", function () {
+            document.getElementById("chatPopup").classList.toggle("active");
+        });
+
+        document.getElementById("closePopup").addEventListener("click", function () {
+            document.getElementById("chatPopup").classList.remove("active");
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const categoryUrl = "https://plugin-be-project.onrender.com/api/v1/categories/level/4?client_id_str=67a5e706ab8cdb82769ac09f";
+            const filterContainer = document.getElementById("filter-container");
+            let selectedCategoryId = "";
+            let selectedCategoryName = "";
+            let selectedFilters = {};
+
+            fetch(categoryUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const categoryDropdown = document.createElement("select");
+                    categoryDropdown.classList.add("dropdown");
+                    categoryDropdown.id = "category-dropdown";
+
+                    const defaultOption = document.createElement("option");
+                    defaultOption.value = "";
+                    defaultOption.textContent = "-- Select Category --";
+                    categoryDropdown.appendChild(defaultOption);
+
+                    data.data.categories.forEach(category => {
+                        let option = document.createElement("option");
+                        option.value = category.id;
+                        option.textContent = category.name;
+                        categoryDropdown.appendChild(option);
+                    });
+
+                    filterContainer.appendChild(categoryDropdown);
+
+                    categoryDropdown.addEventListener("change", function () {
+                        selectedCategoryId = this.value;
+                        selectedCategoryName = this.options[this.selectedIndex].text;
+                        filterContainer.innerHTML = '';
+                        filterContainer.appendChild(categoryDropdown);
+                        if (selectedCategoryName) {
+                            sendFilters();
+                        }
+                        if (selectedCategoryId) {
+                            fetchFilters(selectedCategoryId);
+                        }
+                    });
+                });
+
+            function fetchFilters(categoryId) {
+                const filterUrl = `https://plugin-be-project.onrender.com/api/v1/categories/filters/${categoryId}`;
+                fetch(filterUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        selectedFilters = {}; // Reset filters
+                        data.data.filters.forEach(filter => {
+                            const filterCard = document.createElement("div");
+                            filterCard.classList.add("filter-card");
+
+                            const filterTitle = document.createElement("h4");
+                            filterTitle.textContent = filter.name;
+                            filterCard.appendChild(filterTitle);
+
+                            const filterOptions = document.createElement("div");
+                            filterOptions.classList.add("filter-options");
+                            filterOptions.style.display = "none";
+
+                            filter.config.options.forEach(option => {
+                                const label = document.createElement("label");
+                                label.classList.add("checkbox-label");
+
+                                const checkbox = document.createElement("input");
+                                checkbox.type = "checkbox";
+                                checkbox.value = option.trim();
+
+                                checkbox.addEventListener("change", function () {
+                                    if (checkbox.checked) {
+                                        if (!selectedFilters[filter.name]) {
+                                            selectedFilters[filter.name] = [];
+                                        }
+                                        selectedFilters[filter.name].push(option.trim());
+                                    } else {
+                                        selectedFilters[filter.name] = selectedFilters[filter.name].filter(f => f !== option.trim());
+                                        if (selectedFilters[filter.name].length === 0) {
+                                            delete selectedFilters[filter.name];
+                                        }
+                                    }
+                                    sendFilters();
+                                });
+
+                                label.appendChild(checkbox);
+                                label.appendChild(document.createTextNode(option.trim()));
+                                filterOptions.appendChild(label);
+                            });
+
+                            filterCard.appendChild(filterOptions);
+                            filterContainer.appendChild(filterCard);
+
+                            filterTitle.addEventListener("click", function () {
+                                filterOptions.style.display = (filterOptions.style.display === "none") ? "block" : "none";
+                            });
+                        });
+                    })
+                    .catch(error => console.error("Error fetching filters:", error));
+            }
+
+            function sendFilters() {
+                const filtersData = {
+                    collection_name: selectedCategoryName,
+                    filters: selectedFilters
+                };
+                console.log("Final Filters Sent:", filtersData);
+                window.parent.postMessage({
+                    method: 'open',
+                    type: "FILTERS_SELECTED",
+                    filters: filtersData.filters,
+                    categoryName: filtersData.collection_name,
+                    categoryId: selectedCategoryId
+                }, "*");
+            }
+
+            document.getElementById("clearFilters").addEventListener("click", function () {
+    selectedFilters = {};
+    selectedCategoryId = "";
+    selectedCategoryName = "";
+    
+    // எல்லா checkbox-களையும் unchecked செய்யவும்
+    document.querySelectorAll(".filter-container input[type=checkbox]").forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
+    // Category dropdown-ஐ default selection-க்கு மாற்றவும்
+    const categoryDropdown = document.getElementById("category-dropdown");
+    if (categoryDropdown) {
+        categoryDropdown.value = "";
+    }
+
+    // Filter container-ஐ காலியாக மாற்றவும் (dropdown மட்டும் இருக்கும்)
+    filterContainer.innerHTML = '';
+    filterContainer.appendChild(categoryDropdown);
+
+    // Parent window-க்கு update அனுப்பவும்
+    window.parent.postMessage({
+        method: 'open',
+        type: "FILTERS_SELECTED",
+        filters: selectedFilters,
+        categoryName: selectedCategoryName,
+        categoryId: selectedCategoryId
+    }, "*");
+});
+
+      
+        });
+    </script>
+</body>
+
+</html>
+
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot with Filters</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            background-color: transparent;
+            overflow: hidden;
+        }
+        .chatbot-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: lightskyblue;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        .chatbot-popup {
+            position: fixed;
+            bottom: -500px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: white;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.3);
+            transition: bottom 0.3s ease-in-out;
+            padding: 20px;
+            z-index: 100;
+            border-radius: 10px 10px 0 0;
+            display: none;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .chatbot-popup.active {
+            bottom: 80px;
+            display: block;
+        }
+        .filter-container {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .clear-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .clear-btn:hover {
+            background-color: darkred;
+        }
+    </style>
+</head>
+<body>
+    <button class="chatbot-btn" id="chatbotButton">❓</button>
+    <div class="chatbot-popup" id="chatPopup">
+        <button class="close-btn" id="closePopup">X</button>
+        <div class="gradient-text">Product Finder</div>
+        <div id="filter-container" class="filter-container"></div>
+        <button id="clearFilters" class="clear-btn">Clear Filters</button>
+    </div>
+    <script>
+        document.getElementById("chatbotButton").addEventListener("click", function () {
+            document.getElementById("chatPopup").classList.toggle("active");
+        });
+        document.getElementById("closePopup").addEventListener("click", function () {
+            document.getElementById("chatPopup").classList.remove("active");
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+            const categoryUrl = "https://plugin-be-project.onrender.com/api/v1/categories/level/4?client_id_str=67a5e706ab8cdb82769ac09f";
+            const filterContainer = document.getElementById("filter-container");
+            let selectedCategoryId = "";
+            let selectedCategoryName = "";
+            let selectedFilters = {};
+
+            const categoryDropdown = document.createElement("select");
+            categoryDropdown.classList.add("dropdown");
+            categoryDropdown.id = "category-dropdown";
+            categoryDropdown.innerHTML = '<option value="">-- Select Category --</option>';
+            filterContainer.appendChild(categoryDropdown);
+
+            fetch(categoryUrl)
+                .then(response => response.json())
+                .then(data => {
+                    data.data.categories.forEach(category => {
+                        let option = document.createElement("option");
+                        option.value = category.id;
+                        option.textContent = category.name;
+                        categoryDropdown.appendChild(option);
+                    });
+                });
+
+            categoryDropdown.addEventListener("change", function () {
+                selectedCategoryId = this.value;
+                selectedCategoryName = this.options[this.selectedIndex].text;
+                filterContainer.innerHTML = '';
+                filterContainer.appendChild(categoryDropdown);
+                if (selectedCategoryId) fetchFilters(selectedCategoryId);
+            });
+
+            function fetchFilters(categoryId) {
+                const filterUrl = `https://plugin-be-project.onrender.com/api/v1/categories/filters/${categoryId}`;
+                fetch(filterUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        selectedFilters = {};
+                        data.data.filters.forEach(filter => {
+                            const filterCard = document.createElement("div");
+                            filterCard.innerHTML = `<h4>${filter.name}</h4>`;
+                            filter.config.options.forEach(option => {
+                                const label = document.createElement("label");
+                                label.innerHTML = `<input type="checkbox" value="${option.trim()}"> ${option.trim()}`;
+                                label.querySelector("input").addEventListener("change", function () {
+                                    if (this.checked) {
+                                        selectedFilters[filter.name] = selectedFilters[filter.name] || [];
+                                        selectedFilters[filter.name].push(option.trim());
+                                    } else {
+                                        selectedFilters[filter.name] = selectedFilters[filter.name].filter(f => f !== option.trim());
+                                        if (!selectedFilters[filter.name].length) delete selectedFilters[filter.name];
+                                    }
+                                    sendFilters();
+                                });
+                                filterCard.appendChild(label);
+                            });
+                            filterContainer.appendChild(filterCard);
+                        });
+                    });
+            }
+
+            function sendFilters() {
+                window.parent.postMessage({
+                    method: 'open',
+                    type: "FILTERS_SELECTED",
+                    filters: selectedFilters,
+                    categoryName: selectedCategoryName,
+                    categoryId: selectedCategoryId
+                }, "*");
+            }
+
+            document.getElementById("clearFilters").addEventListener("click", function () {
+                selectedFilters = {};
+                document.querySelectorAll(".filter-container input[type=checkbox]").forEach(checkbox => checkbox.checked = false);
+                categoryDropdown.value = "";
+                filterContainer.innerHTML = '';
+                filterContainer.appendChild(categoryDropdown);
+            });
+        });
+    </script>
+</body>
+</html> -->
