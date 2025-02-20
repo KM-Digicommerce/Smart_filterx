@@ -1,7 +1,7 @@
 
 // index.js
 // Select the button by its ID
-const button = document.getElementById('changeColorBtn');
+const button = document.getElementById('changeColorBtn'); 
 
 // Function to change the background color
 function changeBackgroundColor() {
